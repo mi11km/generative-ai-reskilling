@@ -1,0 +1,123 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when in working with code in this repository.
+
+## プロジェクト概要
+
+このプロジェクトは、ゲーム開発チームメンバーがチャット形式でゲーム仕様を問い合わせできるRAG（Retrieval-Augmented Generation）チャットボットです。大容量のゲーム仕様書（268KB+の日本語マークダウン）から最新情報を検索・抽出し、コンテキストに基づいた回答を提供します。
+
+## 開発環境セットアップと実行コマンド
+
+```bash
+# 依存関係のインストール（仮想環境の作成と依存パッケージのインストール）
+uv sync
+
+# メインアプリケーションの実行（FastAPIサーバー起動）
+uv run python -m src.main
+
+# Testの実行
+uv run pytest tests/
+
+# 新しい依存関係の追加
+uv add <package-name>
+
+# 依存関係の削除
+uv remove <package-name>
+
+# 依存関係の更新
+uv lock --upgrade
+
+# 環境変数の設定（必須）
+# .env.exampleをコピーして.envファイルを作成し、APIキーを設定
+cp .env.example .env
+# .envファイルを編集してOPENAI_API_KEYを設定
+```
+
+## 開発フロー
+Pytestを用いたテスト駆動開発で開発を行ってください。 テストは`tests/`ディレクトリに配置されます。
+
+下記点に注意して開発を進めてください。
+- 可能な限り単体テストでカバーできるように、アーキテクチャや設計に配慮すること
+- 外部APIとの接続をする必要があるテストは、モック化してテストを行うこと
+
+
+## アーキテクチャ概要
+
+### レイヤード構造
+```
+API Layer (FastAPI)
+    ↓
+Business Logic Layer (RAG Service)
+    ↓
+Data Layer (ChromaDB + Document Loader)
+```
+
+### 主要コンポーネント
+
+**API層**: 
+- `src/api/chat.py`: チャットエンドポイント（`/chat`）とヘルスチェック（`/health`）
+- `src/main.py`: FastAPIアプリケーションのエントリーポイント、CORS設定、ライフサイクル管理
+
+**ビジネスロジック層**:
+- `src/services/rag_service.py`: RAG実装のコア、ベクトル検索とLLM統合
+- `src/services/document_loader.py`: マークダウンドキュメントの読み込みとインテリジェントチャンキング
+- `src/services/embeddings.py`: 多言語埋め込みサービス（multilingual-e5-large使用）
+
+**設定・モデル層**:
+- `src/config/settings.py`: Pydantic Settingsを使用した設定管理
+- `src/models/schemas.py`: リクエスト/レスポンスのPydanticモデル
+
+### データフロー
+1. ユーザークエリ → API層
+2. RAGサービスがクエリを埋め込みベクトルに変換
+3. ChromaDBで類似文書を検索
+4. 検索結果をコンテキストとしてOpenAI APIに送信
+5. 生成された回答をユーザーに返却
+
+## 技術スタック
+
+- **言語**: Python 3.13+
+- **パッケージマネージャー**: UV 0.7.14
+- **Webフレームワーク**: FastAPI 0.104.0
+- **LLM**: OpenAI API (GPT-4o-mini)
+- **ベクトルDB**: ChromaDB 0.5.0
+- **埋め込みモデル**: Sentence Transformers (multilingual-e5-large)
+- **RAGフレームワーク**: LangChain
+
+## 重要な開発考慮事項
+
+### ドキュメント処理
+- `docs/spec/仕様書.md`が主要な知識ベース（268KB+の日本語コンテンツ）
+- 日本語テキストの適切なチャンキング戦略が実装済み
+- ベクトルストアは`data/`ディレクトリに永続化
+
+### 環境変数
+必須の環境変数：
+- `OPENAI_API_KEY`: OpenAI APIキー
+
+オプション設定：
+- `EMBEDDING_MODEL`: 埋め込みモデル名（デフォルト: intfloat/multilingual-e5-large）
+- `CHUNK_SIZE`: ドキュメントチャンクサイズ（デフォルト: 1000）
+- `CHUNK_OVERLAP`: チャンクオーバーラップ（デフォルト: 200）
+
+### 日本語対応
+- プロジェクト全体が日本語対応
+- 多言語埋め込みモデルを使用
+- 日本語マークダウン文書の処理に最適化
+
+### データ永続化
+- ChromaDBデータは`data/`ディレクトリに保存
+- `.gitignore`でベクトルストアファイルを除外
+- 初回実行時に自動的にドキュメントをインデックス化
+
+## APIエンドポイント
+
+- `POST /chat`: チャット機能（Body: `{"message": "質問内容"}`）
+- `GET /health`: ヘルスチェック
+
+## 開発時の注意点
+
+1. **ベクトルストアの初期化**: 初回実行時に`docs/spec/`のドキュメントが自動的にインデックス化される
+2. **依存関係管理**: UV を使用、`pip`ではなく`uv add/remove`を使用
+3. **環境設定**: `.env`ファイルの設定が必須（OpenAI APIキー）
+4. **日本語処理**: 全てのテキスト処理が日本語に対応済み

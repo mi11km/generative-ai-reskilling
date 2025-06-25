@@ -3,6 +3,7 @@ import { MessageBubble } from './MessageBubble';
 import { LoadingSpinner } from './LoadingSpinner';
 import { SessionSidebar } from './SessionSidebar';
 import { apiClient } from '../lib/api';
+import { SessionStorage } from '../lib/storage';
 import type { Message, ChatState, MessageResponse, SourceDocument } from '../lib/types';
 
 export function ChatInterface() {
@@ -24,6 +25,33 @@ export function ChatInterface() {
   useEffect(() => {
     scrollToBottom();
   }, [chatState.messages]);
+
+  useEffect(() => {
+    const initializeSession = async () => {
+      if (!SessionStorage.isStorageAvailable()) {
+        console.warn('localStorage is not available');
+        return;
+      }
+
+      const savedSessionId = SessionStorage.getCurrentSessionId();
+      if (savedSessionId && savedSessionId !== chatState.currentSessionId) {
+        try {
+          await loadSessionMessages(savedSessionId);
+        } catch (error) {
+          console.warn('Failed to load saved session, starting fresh:', error);
+          SessionStorage.clearCurrentSessionId();
+        }
+      }
+    };
+
+    initializeSession();
+  }, []);
+
+  useEffect(() => {
+    if (chatState.currentSessionId && SessionStorage.isStorageAvailable()) {
+      SessionStorage.saveCurrentSessionId(chatState.currentSessionId);
+    }
+  }, [chatState.currentSessionId]);
 
   const generateMessageId = () => Math.random().toString(36).substr(2, 9);
 
@@ -69,6 +97,7 @@ export function ChatInterface() {
       currentSessionId: null,
       error: null,
     }));
+    SessionStorage.clearCurrentSessionId();
     setSidebarVisible(false);
   };
 

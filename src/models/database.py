@@ -85,21 +85,23 @@ class DatabaseManager:
 
 class DatabaseManagerSingleton:
     """DatabaseManagerのシングルトンクラス"""
-    
+
     _instance: Optional["DatabaseManagerSingleton"] = None
     _db_manager: Optional[DatabaseManager] = None
-    
+
     def __new__(cls) -> "DatabaseManagerSingleton":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-    
-    def get_database_manager(self, database_url: str = "sqlite:///./data/conversations.db") -> DatabaseManager:
+
+    def get_database_manager(
+        self, database_url: str = "sqlite:///./data/conversations.db"
+    ) -> DatabaseManager:
         """DatabaseManagerのインスタンスを取得（シングルトン）"""
         if self._db_manager is None:
             self._db_manager = DatabaseManager(database_url)
         return self._db_manager
-    
+
     def reset(self) -> None:
         """テスト用: インスタンスをリセット"""
         self._db_manager = None

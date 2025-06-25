@@ -27,7 +27,7 @@ export interface HealthResponse {
 // Frontend-specific types
 export interface Message {
   id: string;
-  type: 'user' | 'assistant';
+  type: "user" | "assistant";
   content: string;
   timestamp: Date;
   sources?: SourceDocument[];

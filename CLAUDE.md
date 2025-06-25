@@ -77,6 +77,9 @@ bun run typecheck
 # リンター実行
 bun run lint
 
+# フォーマット実行
+bun run format
+
 # テストの実行
 bun run test
 
@@ -104,6 +107,7 @@ Pytestを用いたテスト駆動開発で開発を行ってください。 テ�
 - **スタイリング**: Tailwind CSSを使用
 - **状態管理**: React hooksを基本とし、複雑な場合のみ外部ライブラリを検討
 - **API通信**: web/app/lib/api.tsのApiClientクラスを使用
+- **リンター・フォーマッター**: Biomeを使用（ESLintから移行済み）
 
 
 ## アーキテクチャ概要
@@ -215,6 +219,7 @@ Data Layer (ChromaDB + Document Loader)
 3. **型安全性**: `web/app/lib/types.ts`で定義された型を必ず使用
 4. **スタイリング**: Tailwind CSSクラスを使用、カスタムCSSは最小限に
 5. **状態管理**: React hooksを基本とし、useStateとuseEffectで十分な場合が多い
+6. **リンター・フォーマッター**: Biomeを使用、設定は`web/biome.json`で管理
 
 ### 開発サーバー起動順序
 1. バックエンド（ポート8000）を先に起動

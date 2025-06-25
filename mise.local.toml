@@ -12,7 +12,7 @@ run = ["uv run ruff check src/ tests/ --fix", "cd web && bun run lint"]
 
 [tasks.format]
 description = "Format App"
-run = ["uv run ruff format src/ tests/"]
+run = ["uv run ruff format src/ tests/", "cd web && bun run format"]
 
 [tasks.run-api]
 description = "Run API in Development Mode"

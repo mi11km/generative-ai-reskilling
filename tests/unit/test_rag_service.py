@@ -328,7 +328,13 @@ class TestRAGService:
     @patch("src.services.rag_service.SessionService")
     @patch("src.services.rag_service.RAGService._initialize_vector_store")
     def test_chat_successful(
-        self, mock_init, mock_session_service_class, mock_db_manager, mock_chat_openai, mock_embedding_service, mock_settings
+        self,
+        mock_init,
+        mock_session_service_class,
+        mock_db_manager,
+        mock_chat_openai,
+        mock_embedding_service,
+        mock_settings,
     ):
         """正常なチャット処理をテスト"""
         # SessionServiceのモック
@@ -337,7 +343,7 @@ class TestRAGService:
         mock_session_service.create_session.return_value = {"id": "test-session-id"}
         mock_session_service.get_conversation_history.return_value = []
         mock_session_service.add_message.return_value = {"id": "msg-1"}
-        
+
         service = RAGService(mock_settings)
 
         # searchメソッドのモック
@@ -389,7 +395,13 @@ class TestRAGService:
     @patch("src.services.rag_service.SessionService")
     @patch("src.services.rag_service.RAGService._initialize_vector_store")
     def test_chat_no_results(
-        self, mock_init, mock_session_service_class, mock_db_manager, mock_chat_openai, mock_embedding_service, mock_settings
+        self,
+        mock_init,
+        mock_session_service_class,
+        mock_db_manager,
+        mock_chat_openai,
+        mock_embedding_service,
+        mock_settings,
     ):
         """検索結果がない場合のチャット処理をテスト"""
         # SessionServiceのモック
@@ -398,7 +410,7 @@ class TestRAGService:
         mock_session_service.create_session.return_value = {"id": "test-session-id"}
         mock_session_service.get_conversation_history.return_value = []
         mock_session_service.add_message.return_value = {"id": "msg-1"}
-        
+
         service = RAGService(mock_settings)
 
         with patch.object(service, "search") as mock_search:
@@ -418,7 +430,13 @@ class TestRAGService:
     @patch("src.services.rag_service.SessionService")
     @patch("src.services.rag_service.RAGService._initialize_vector_store")
     def test_chat_with_truncated_source_content(
-        self, mock_init, mock_session_service_class, mock_db_manager, mock_chat_openai, mock_embedding_service, mock_settings
+        self,
+        mock_init,
+        mock_session_service_class,
+        mock_db_manager,
+        mock_chat_openai,
+        mock_embedding_service,
+        mock_settings,
     ):
         """長いソース内容の切り詰めをテスト"""
         # SessionServiceのモック
@@ -427,7 +445,7 @@ class TestRAGService:
         mock_session_service.create_session.return_value = {"id": "test-session-id"}
         mock_session_service.get_conversation_history.return_value = []
         mock_session_service.add_message.return_value = {"id": "msg-1"}
-        
+
         service = RAGService(mock_settings)
 
         # 長い内容のドキュメント

@@ -38,17 +38,16 @@ class TestCreateApp:
         app = create_app()
         
         # CORS ミドルウェアが追加されていることを確認
-        middleware_types = [type(middleware) for middleware in app.user_middleware]
+        # FastAPIのuser_middlewareから確認
+        middleware_found = False
+        for middleware in app.user_middleware:
+            if hasattr(middleware, 'cls'):
+                from fastapi.middleware.cors import CORSMiddleware
+                if middleware.cls == CORSMiddleware:
+                    middleware_found = True
+                    break
         
-        # CORSMiddleware が含まれていることを確認
-        from fastapi.middleware.cors import CORSMiddleware
-        cors_middleware_classes = [
-            mw for mw in middleware_types 
-            if hasattr(mw, '__name__') and 'CORS' in mw.__name__
-        ]
-        assert len(cors_middleware_classes) > 0 or any(
-            'cors' in str(mw).lower() for mw in middleware_types
-        )
+        assert middleware_found, "CORSMiddleware should be configured"
     
     @patch("src.main.get_settings")
     def test_create_app_router_inclusion(self, mock_get_settings):
@@ -233,39 +232,57 @@ class TestMain:
             reload=True
         )
     
+    @patch("src.main.uvicorn.run")
+    @patch("src.main.create_app")
     @patch("src.main.sys.exit")
     @patch("src.main.get_settings")
     @patch("src.main.logger")
-    def test_main_missing_api_key(self, mock_logger, mock_get_settings, mock_sys_exit):
+    def test_main_missing_api_key(self, mock_logger, mock_get_settings, mock_sys_exit, mock_create_app, mock_uvicorn_run):
         """OpenAI APIキーが設定されていない場合のテスト"""
         mock_settings = Mock()
         mock_settings.openai_api_key = None  # APIキーが設定されていない
         mock_get_settings.return_value = mock_settings
         
-        main()
+        # sys.exit()を実際に例外を投げるように設定
+        mock_sys_exit.side_effect = SystemExit(1)
+        
+        with pytest.raises(SystemExit):
+            main()
         
         # エラーログが出力されることを確認
         mock_logger.error.assert_called_with("OPENAI_API_KEY環境変数が設定されていません")
         
         # sys.exit(1)が呼ばれることを確認
         mock_sys_exit.assert_called_once_with(1)
+        
+        # uvicorn.runが呼ばれないことを確認
+        mock_uvicorn_run.assert_not_called()
     
+    @patch("src.main.uvicorn.run")
+    @patch("src.main.create_app")
     @patch("src.main.sys.exit")
     @patch("src.main.get_settings")
     @patch("src.main.logger")
-    def test_main_empty_api_key(self, mock_logger, mock_get_settings, mock_sys_exit):
+    def test_main_empty_api_key(self, mock_logger, mock_get_settings, mock_sys_exit, mock_create_app, mock_uvicorn_run):
         """空のOpenAI APIキーの場合のテスト"""
         mock_settings = Mock()
         mock_settings.openai_api_key = ""  # 空のAPIキー
         mock_get_settings.return_value = mock_settings
         
-        main()
+        # sys.exit()を実際に例外を投げるように設定
+        mock_sys_exit.side_effect = SystemExit(1)
+        
+        with pytest.raises(SystemExit):
+            main()
         
         # エラーログが出力されることを確認
         mock_logger.error.assert_called_with("OPENAI_API_KEY環境変数が設定されていません")
         
         # sys.exit(1)が呼ばれることを確認
         mock_sys_exit.assert_called_once_with(1)
+        
+        # uvicorn.runが呼ばれないことを確認
+        mock_uvicorn_run.assert_not_called()
 
 
 class TestMainIntegration:
@@ -333,17 +350,26 @@ def test_main_debug_mode_parameter(mock_get_settings, mock_create_app, mock_uvic
 
 
 @pytest.mark.parametrize("api_key", [None, "", "  ", "\t\n"])
+@patch("src.main.uvicorn.run")
+@patch("src.main.create_app") 
 @patch("src.main.sys.exit")
 @patch("src.main.get_settings")
 @patch("src.main.logger")
-def test_main_invalid_api_keys_parametrized(mock_logger, mock_get_settings, mock_sys_exit, api_key):
+def test_main_invalid_api_keys_parametrized(mock_logger, mock_get_settings, mock_sys_exit, mock_create_app, mock_uvicorn_run, api_key):
     """様々な無効なAPIキーをパラメータ化テストで検証"""
     mock_settings = Mock()
     mock_settings.openai_api_key = api_key
     mock_get_settings.return_value = mock_settings
     
-    main()
+    # sys.exit()を実際に例外を投げるように設定
+    mock_sys_exit.side_effect = SystemExit(1)
+    
+    with pytest.raises(SystemExit):
+        main()
     
     # エラーログとsys.exitが呼ばれることを確認
     mock_logger.error.assert_called_with("OPENAI_API_KEY環境変数が設定されていません")
     mock_sys_exit.assert_called_once_with(1)
+    
+    # uvicorn.runが呼ばれないことを確認
+    mock_uvicorn_run.assert_not_called()

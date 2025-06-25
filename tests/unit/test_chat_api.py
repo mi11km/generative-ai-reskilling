@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 
-from src.api.chat import router, get_rag_service
+from src.api.chat import router, get_rag_service, RAGServiceContainer
 from src.models.schemas import ChatRequest, ChatResponse, HealthResponse, SourceDocument
 from src.config.settings import Settings
 
@@ -43,12 +43,12 @@ def mock_rag_service():
 class TestChatAPI:
     """チャットAPIのテスト"""
     
-    @patch("src.api.chat.get_rag_service")
-    def test_chat_endpoint_successful(self, mock_get_rag_service, client):
+    def test_chat_endpoint_successful(self, client):
         """正常なチャットリクエストをテスト"""
+        from src.api.chat import get_rag_service
+        
         # RAGサービスのモック
         mock_rag_service = Mock()
-        mock_get_rag_service.return_value = mock_rag_service
         
         # チャットレスポンスのモック
         mock_response = ChatResponse(
@@ -64,32 +64,40 @@ class TestChatAPI:
         )
         mock_rag_service.chat.return_value = mock_response
         
-        # リクエスト実行
-        response = client.post("/api/v1/chat", json={
-            "question": "テストの質問です",
-            "max_results": 3
-        })
+        # 依存性をオーバーライド
+        from src.api.chat import router
+        app = client.app
+        app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
         
-        # ステータスコードの確認
-        assert response.status_code == 200
-        
-        # レスポンス内容の確認
-        data = response.json()
-        assert data["answer"] == "テストの回答です。"
-        assert len(data["sources"]) == 1
-        assert data["sources"][0]["content"] == "テストソース内容"
-        assert data["sources"][0]["section"] == "テストセクション"
-        assert data["confidence"] == 0.85
-        
-        # RAGサービスが正しく呼ばれたことを確認
-        mock_rag_service.chat.assert_called_once_with("テストの質問です", 3)
+        try:
+            # リクエスト実行
+            response = client.post("/api/v1/chat", json={
+                "question": "テストの質問です",
+                "max_results": 3
+            })
+            
+            # ステータスコードの確認
+            assert response.status_code == 200
+            
+            # レスポンス内容の確認
+            data = response.json()
+            assert data["answer"] == "テストの回答です。"
+            assert len(data["sources"]) == 1
+            assert data["sources"][0]["content"] == "テストソース内容"
+            assert data["sources"][0]["section"] == "テストセクション"
+            assert data["confidence"] == 0.85
+            
+            # RAGサービスが正しく呼ばれたことを確認
+            mock_rag_service.chat.assert_called_once_with("テストの質問です", 3)
+        finally:
+            # オーバーライドをクリア
+            app.dependency_overrides.clear()
     
-    @patch("src.api.chat.get_rag_service")
-    def test_chat_endpoint_default_max_results(self, mock_get_rag_service, client):
+    def test_chat_endpoint_default_max_results(self, client):
         """デフォルトのmax_resultsでのチャットリクエストをテスト"""
-        mock_rag_service = Mock()
-        mock_get_rag_service.return_value = mock_rag_service
+        from src.api.chat import get_rag_service
         
+        mock_rag_service = Mock()
         mock_response = ChatResponse(
             answer="回答",
             sources=[],
@@ -97,22 +105,28 @@ class TestChatAPI:
         )
         mock_rag_service.chat.return_value = mock_response
         
-        # max_resultsを指定しないリクエスト
-        response = client.post("/api/v1/chat", json={
-            "question": "質問"
-        })
+        # 依存性をオーバーライド
+        app = client.app
+        app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
         
-        assert response.status_code == 200
-        
-        # デフォルト値（3）で呼ばれることを確認
-        mock_rag_service.chat.assert_called_once_with("質問", 3)
+        try:
+            # max_resultsを指定しないリクエスト
+            response = client.post("/api/v1/chat", json={
+                "question": "質問"
+            })
+            
+            assert response.status_code == 200
+            
+            # デフォルト値（3）で呼ばれることを確認
+            mock_rag_service.chat.assert_called_once_with("質問", 3)
+        finally:
+            app.dependency_overrides.clear()
     
-    @patch("src.api.chat.get_rag_service")
-    def test_chat_endpoint_custom_max_results(self, mock_get_rag_service, client):
+    def test_chat_endpoint_custom_max_results(self, client):
         """カスタムmax_resultsでのチャットリクエストをテスト"""
-        mock_rag_service = Mock()
-        mock_get_rag_service.return_value = mock_rag_service
+        from src.api.chat import get_rag_service
         
+        mock_rag_service = Mock()
         mock_response = ChatResponse(
             answer="回答",
             sources=[],
@@ -120,16 +134,23 @@ class TestChatAPI:
         )
         mock_rag_service.chat.return_value = mock_response
         
-        # カスタムmax_resultsでのリクエスト
-        response = client.post("/api/v1/chat", json={
-            "question": "質問",
-            "max_results": 7
-        })
+        # 依存性をオーバーライド
+        app = client.app
+        app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
         
-        assert response.status_code == 200
-        
-        # カスタム値で呼ばれることを確認
-        mock_rag_service.chat.assert_called_once_with("質問", 7)
+        try:
+            # カスタムmax_resultsでのリクエスト
+            response = client.post("/api/v1/chat", json={
+                "question": "質問",
+                "max_results": 7
+            })
+            
+            assert response.status_code == 200
+            
+            # カスタム値で呼ばれることを確認
+            mock_rag_service.chat.assert_called_once_with("質問", 7)
+        finally:
+            app.dependency_overrides.clear()
     
     def test_chat_endpoint_invalid_max_results(self, client):
         """無効なmax_resultsでのバリデーションエラーをテスト"""
@@ -162,29 +183,34 @@ class TestChatAPI:
         })
         assert response.status_code == 422  # Validation Error
     
-    @patch("src.api.chat.get_rag_service")
-    def test_chat_endpoint_internal_error(self, mock_get_rag_service, client):
+    def test_chat_endpoint_internal_error(self, client):
         """内部エラーの処理をテスト"""
-        mock_rag_service = Mock()
-        mock_get_rag_service.return_value = mock_rag_service
+        from src.api.chat import get_rag_service
         
+        mock_rag_service = Mock()
         # RAGサービスで例外が発生
         mock_rag_service.chat.side_effect = Exception("テストエラー")
         
-        response = client.post("/api/v1/chat", json={
-            "question": "テスト質問"
-        })
+        # 依存性をオーバーライド
+        app = client.app
+        app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
         
-        # HTTPException (500) が発生することを確認
-        assert response.status_code == 500
-        assert "内部サーバーエラーが発生しました" in response.json()["detail"]
+        try:
+            response = client.post("/api/v1/chat", json={
+                "question": "テスト質問"
+            })
+            
+            # HTTPException (500) が発生することを確認
+            assert response.status_code == 500
+            assert "内部サーバーエラーが発生しました" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
     
-    @patch("src.api.chat.get_rag_service")
-    def test_chat_endpoint_japanese_question(self, mock_get_rag_service, client):
+    def test_chat_endpoint_japanese_question(self, client):
         """日本語の質問での処理をテスト"""
-        mock_rag_service = Mock()
-        mock_get_rag_service.return_value = mock_rag_service
+        from src.api.chat import get_rag_service
         
+        mock_rag_service = Mock()
         mock_response = ChatResponse(
             answer="日本語での回答です。",
             sources=[],
@@ -192,24 +218,30 @@ class TestChatAPI:
         )
         mock_rag_service.chat.return_value = mock_response
         
-        japanese_question = "ゲームの基本システムについて教えてください。"
-        response = client.post("/api/v1/chat", json={
-            "question": japanese_question
-        })
+        # 依存性をオーバーライド
+        app = client.app
+        app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
         
-        assert response.status_code == 200
-        data = response.json()
-        assert data["answer"] == "日本語での回答です。"
-        
-        # 日本語の質問が正しく渡されることを確認
-        mock_rag_service.chat.assert_called_once_with(japanese_question, 3)
+        try:
+            japanese_question = "ゲームの基本システムについて教えてください。"
+            response = client.post("/api/v1/chat", json={
+                "question": japanese_question
+            })
+            
+            assert response.status_code == 200
+            data = response.json()
+            assert data["answer"] == "日本語での回答です。"
+            
+            # 日本語の質問が正しく渡されることを確認
+            mock_rag_service.chat.assert_called_once_with(japanese_question, 3)
+        finally:
+            app.dependency_overrides.clear()
     
-    @patch("src.api.chat.get_rag_service")
-    def test_chat_endpoint_long_question(self, mock_get_rag_service, client):
+    def test_chat_endpoint_long_question(self, client):
         """長い質問での処理をテスト"""
-        mock_rag_service = Mock()
-        mock_get_rag_service.return_value = mock_rag_service
+        from src.api.chat import get_rag_service
         
+        mock_rag_service = Mock()
         mock_response = ChatResponse(
             answer="長い質問への回答",
             sources=[],
@@ -217,94 +249,124 @@ class TestChatAPI:
         )
         mock_rag_service.chat.return_value = mock_response
         
-        # 長い質問（1000文字）
-        long_question = "テスト質問です。" * 100
-        response = client.post("/api/v1/chat", json={
-            "question": long_question
-        })
+        # 依存性をオーバーライド
+        app = client.app
+        app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
         
-        assert response.status_code == 200
-        
-        # 長い質問も正しく処理されることを確認
-        mock_rag_service.chat.assert_called_once_with(long_question, 3)
+        try:
+            # 長い質問（1000文字）
+            long_question = "テスト質問です。" * 100
+            response = client.post("/api/v1/chat", json={
+                "question": long_question
+            })
+            
+            assert response.status_code == 200
+            
+            # 長い質問も正しく処理されることを確認
+            mock_rag_service.chat.assert_called_once_with(long_question, 3)
+        finally:
+            app.dependency_overrides.clear()
 
 
 class TestHealthAPI:
     """ヘルスチェックAPIのテスト"""
     
-    @patch("src.api.chat.get_rag_service")
-    @patch("src.api.chat.get_settings")
-    def test_health_endpoint_healthy(self, mock_get_settings, mock_get_rag_service, client):
+    def test_health_endpoint_healthy(self, client):
         """正常な状態でのヘルスチェックをテスト"""
+        from src.api.chat import get_rag_service, get_settings
+        
         # 設定のモック
         mock_settings = Mock()
         mock_settings.version = "0.1.0"
-        mock_get_settings.return_value = mock_settings
         
         # RAGサービスのモック
         mock_rag_service = Mock()
         mock_rag_service.is_ready.return_value = True
-        mock_get_rag_service.return_value = mock_rag_service
         
-        response = client.get("/api/v1/health")
+        # 依存性をオーバーライド
+        app = client.app
+        app.dependency_overrides[get_settings] = lambda: mock_settings
+        app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
         
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "healthy"
-        assert data["version"] == "0.1.0"
-        assert data["vector_store_ready"] is True
+        try:
+            response = client.get("/api/v1/health")
+            
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "healthy"
+            assert data["version"] == "0.1.0"
+            assert data["vector_store_ready"] is True
+        finally:
+            app.dependency_overrides.clear()
     
-    @patch("src.api.chat.get_rag_service")
-    @patch("src.api.chat.get_settings")
-    def test_health_endpoint_vector_store_not_ready(self, mock_get_settings, mock_get_rag_service, client):
+    def test_health_endpoint_vector_store_not_ready(self, client):
         """ベクトルストアが準備できていない状態でのヘルスチェックをテスト"""
+        from src.api.chat import get_rag_service, get_settings
+        
         mock_settings = Mock()
         mock_settings.version = "0.1.0"
-        mock_get_settings.return_value = mock_settings
         
         mock_rag_service = Mock()
         mock_rag_service.is_ready.return_value = False
-        mock_get_rag_service.return_value = mock_rag_service
         
-        response = client.get("/api/v1/health")
+        # 依存性をオーバーライド
+        app = client.app
+        app.dependency_overrides[get_settings] = lambda: mock_settings
+        app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
         
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "healthy"  # ステータス自体は healthy
-        assert data["vector_store_ready"] is False
+        try:
+            response = client.get("/api/v1/health")
+            
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "healthy"  # ステータス自体は healthy
+            assert data["vector_store_ready"] is False
+        finally:
+            app.dependency_overrides.clear()
 
 
-class TestGetRAGService:
-    """get_rag_service 依存性注入のテスト"""
+class TestRAGServiceContainer:
+    """RAGServiceContainer クラスのテスト"""
     
-    @patch("src.api.chat._rag_service", None)
+    def test_singleton_behavior(self):
+        """シングルトン動作をテスト"""
+        container1 = RAGServiceContainer()
+        container2 = RAGServiceContainer()
+        
+        # 同じインスタンスが返されることを確認
+        assert container1 is container2
+    
     @patch("src.api.chat.RAGService")
-    def test_get_rag_service_first_call(self, mock_rag_service_class, mock_settings):
+    def test_get_or_create_rag_service_first_call(self, mock_rag_service_class, mock_settings):
         """初回呼び出しでRAGServiceが作成されることをテスト"""
+        # コンテナをリセット
+        container = RAGServiceContainer()
+        container.reset()
+        
         mock_rag_instance = Mock()
         mock_rag_service_class.return_value = mock_rag_instance
         
-        result = get_rag_service(mock_settings)
+        result = container.get_or_create_rag_service(mock_settings)
         
         # RAGServiceが設定で初期化されることを確認
         mock_rag_service_class.assert_called_once_with(mock_settings)
         assert result == mock_rag_instance
     
     @patch("src.api.chat.RAGService")
-    def test_get_rag_service_singleton_behavior(self, mock_rag_service_class, mock_settings):
-        """シングルトン動作をテスト"""
-        # グローバル変数をクリア
-        import src.api.chat
-        src.api.chat._rag_service = None
+    def test_get_or_create_rag_service_cached_behavior(self, mock_rag_service_class, mock_settings):
+        """キャッシュ動作をテスト"""
+        # コンテナをリセット
+        container = RAGServiceContainer()
+        container.reset()
         
         mock_rag_instance = Mock()
         mock_rag_service_class.return_value = mock_rag_instance
         
         # 最初の呼び出し
-        result1 = get_rag_service(mock_settings)
+        result1 = container.get_or_create_rag_service(mock_settings)
         
         # 2回目の呼び出し
-        result2 = get_rag_service(mock_settings)
+        result2 = container.get_or_create_rag_service(mock_settings)
         
         # RAGServiceは1回だけ作成されることを確認
         mock_rag_service_class.assert_called_once_with(mock_settings)
@@ -312,6 +374,42 @@ class TestGetRAGService:
         # 同じインスタンスが返されることを確認
         assert result1 is result2
         assert result1 == mock_rag_instance
+    
+    def test_reset(self, mock_settings):
+        """リセット機能をテスト"""
+        container = RAGServiceContainer()
+        
+        # RAGServiceのモックを設定
+        mock_rag_service = Mock()
+        container._rag_service = mock_rag_service
+        
+        # リセット前は設定されている
+        assert container._rag_service == mock_rag_service
+        
+        # リセット実行
+        container.reset()
+        
+        # リセット後はNoneになる
+        assert container._rag_service is None
+
+
+class TestGetRAGService:
+    """get_rag_service 依存性注入のテスト"""
+    
+    @patch("src.api.chat.RAGServiceContainer")
+    def test_get_rag_service_calls_container(self, mock_container_class, mock_settings):
+        """get_rag_serviceがコンテナを使用することをテスト"""
+        mock_container_instance = Mock()
+        mock_container_class.return_value = mock_container_instance
+        
+        mock_rag_service = Mock()
+        mock_container_instance.get_or_create_rag_service.return_value = mock_rag_service
+        
+        result = get_rag_service(mock_settings, mock_container_instance)
+        
+        # コンテナのメソッドが正しい引数で呼ばれることを確認
+        mock_container_instance.get_or_create_rag_service.assert_called_once_with(mock_settings)
+        assert result == mock_rag_service
 
 
 @pytest.mark.parametrize("question,max_results", [
@@ -321,12 +419,11 @@ class TestGetRAGService:
     ("日本語での質問：ゲームシステムについて", 7),
     ("English question about game mechanics", 10),
 ])
-@patch("src.api.chat.get_rag_service")
-def test_chat_endpoint_various_inputs(mock_get_rag_service, question, max_results, client):
+def test_chat_endpoint_various_inputs(question, max_results, client):
     """様々な入力でのチャットエンドポイントをパラメータ化テストで検証"""
-    mock_rag_service = Mock()
-    mock_get_rag_service.return_value = mock_rag_service
+    from src.api.chat import get_rag_service
     
+    mock_rag_service = Mock()
     mock_response = ChatResponse(
         answer=f"回答: {question[:20]}...",
         sources=[],
@@ -334,13 +431,20 @@ def test_chat_endpoint_various_inputs(mock_get_rag_service, question, max_result
     )
     mock_rag_service.chat.return_value = mock_response
     
-    response = client.post("/api/v1/chat", json={
-        "question": question,
-        "max_results": max_results
-    })
+    # 依存性をオーバーライド
+    app = client.app
+    app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
     
-    assert response.status_code == 200
-    mock_rag_service.chat.assert_called_once_with(question, max_results)
+    try:
+        response = client.post("/api/v1/chat", json={
+            "question": question,
+            "max_results": max_results
+        })
+        
+        assert response.status_code == 200
+        mock_rag_service.chat.assert_called_once_with(question, max_results)
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.parametrize("invalid_max_results", [-1, 0, 11, 100, -5])

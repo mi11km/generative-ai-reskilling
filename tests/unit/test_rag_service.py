@@ -400,8 +400,22 @@ class TestRAGService:
 @patch("src.services.rag_service.EmbeddingService")
 @patch("src.services.rag_service.ChatOpenAI")
 @patch("src.services.rag_service.RAGService._initialize_vector_store")
-def test_search_max_results_parameter(mock_init, mock_chat_openai, mock_embedding_service, max_results, mock_settings):
+def test_search_max_results_parameter(mock_init, mock_chat_openai, mock_embedding_service, max_results):
     """異なるmax_results値での検索をパラメータ化テストで検証"""
+    # テスト用設定を作成
+    mock_settings = Settings(
+        openai_api_key="test_api_key",
+        openai_model="gpt-4o-mini",
+        openai_temperature=0.1,
+        chroma_persist_directory="test_data/chroma",
+        embedding_model_name="test/embedding-model",
+        spec_file_path="test_spec.md",
+        chunk_size=500,
+        chunk_overlap=100,
+        max_context_length=2000,
+        similarity_threshold=0.5
+    )
+    
     service = RAGService(mock_settings)
     
     mock_vector_store = Mock()
@@ -431,11 +445,22 @@ def test_search_max_results_parameter(mock_init, mock_chat_openai, mock_embeddin
 @patch("src.services.rag_service.ChatOpenAI")
 @patch("src.services.rag_service.RAGService._initialize_vector_store")
 def test_search_similarity_threshold_filtering(
-    mock_init, mock_chat_openai, mock_embedding_service, similarity_threshold, mock_settings
+    mock_init, mock_chat_openai, mock_embedding_service, similarity_threshold
 ):
     """異なる類似度しきい値でのフィルタリングをパラメータ化テストで検証"""
-    # 設定のsimilarity_thresholdを変更
-    mock_settings.similarity_threshold = similarity_threshold
+    # テスト用設定を作成（similarity_thresholdを変更）
+    mock_settings = Settings(
+        openai_api_key="test_api_key",
+        openai_model="gpt-4o-mini", 
+        openai_temperature=0.1,
+        chroma_persist_directory="test_data/chroma",
+        embedding_model_name="test/embedding-model",
+        spec_file_path="test_spec.md",
+        chunk_size=500,
+        chunk_overlap=100,
+        max_context_length=2000,
+        similarity_threshold=similarity_threshold
+    )
     
     service = RAGService(mock_settings)
     

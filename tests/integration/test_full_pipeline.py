@@ -32,15 +32,17 @@ class TestFullRAGPipeline:
         )
     
     @patch("src.services.rag_service.ChatOpenAI")
-    @patch("src.services.embeddings.HuggingFaceEmbeddings")
+    @patch("src.services.rag_service.EmbeddingService")
     @patch("src.services.rag_service.Chroma")
     def test_document_loading_to_vector_store_pipeline(
-        self, mock_chroma, mock_huggingface_embeddings, mock_chat_openai, integration_settings
+        self, mock_chroma, mock_embedding_service, mock_chat_openai, integration_settings
     ):
         """ドキュメント読み込みからベクトルストア作成までのパイプラインをテスト"""
         # モックの設定
         mock_embeddings_instance = Mock()
-        mock_huggingface_embeddings.return_value = mock_embeddings_instance
+        mock_service = Mock()
+        mock_service.embeddings = mock_embeddings_instance
+        mock_embedding_service.return_value = mock_service
         
         mock_vector_store = Mock()
         mock_chroma.from_documents.return_value = mock_vector_store
@@ -73,7 +75,7 @@ class TestFullRAGPipeline:
         assert all(isinstance(doc, Document) for doc in passed_documents)
         
         # 埋め込み関数が渡されていることを確認
-        assert call_args[1]['embedding'] == mock_embeddings_instance.embeddings
+        assert call_args[1]['embedding'] == mock_embeddings_instance
         
         # 永続化ディレクトリが正しく設定されていることを確認
         assert call_args[1]['persist_directory'] == integration_settings.chroma_persist_directory
@@ -82,15 +84,17 @@ class TestFullRAGPipeline:
         mock_vector_store.persist.assert_called_once()
     
     @patch("src.services.rag_service.ChatOpenAI")
-    @patch("src.services.embeddings.HuggingFaceEmbeddings")
+    @patch("src.services.rag_service.EmbeddingService")
     @patch("src.services.rag_service.Chroma")
     def test_search_to_answer_generation_pipeline(
-        self, mock_chroma, mock_huggingface_embeddings, mock_chat_openai, integration_settings
+        self, mock_chroma, mock_embedding_service, mock_chat_openai, integration_settings
     ):
         """検索から回答生成までのパイプラインをテスト"""
         # モックの設定
         mock_embeddings_instance = Mock()
-        mock_huggingface_embeddings.return_value = mock_embeddings_instance
+        mock_service = Mock()
+        mock_service.embeddings = mock_embeddings_instance
+        mock_embedding_service.return_value = mock_service
         
         mock_vector_store = Mock()
         mock_chroma.from_documents.return_value = mock_vector_store
@@ -145,17 +149,19 @@ class TestFullRAGPipeline:
             assert "ゲームの基本システムについて教えて" in call_kwargs["question"]
     
     @patch("src.services.rag_service.ChatOpenAI")
-    @patch("src.services.embeddings.HuggingFaceEmbeddings")
+    @patch("src.services.rag_service.EmbeddingService")
     @patch("src.services.rag_service.Chroma")
     def test_similarity_threshold_filtering_integration(
-        self, mock_chroma, mock_huggingface_embeddings, mock_chat_openai, integration_settings
+        self, mock_chroma, mock_embedding_service, mock_chat_openai, integration_settings
     ):
         """類似度しきい値フィルタリングの統合テスト"""
         # 類似度しきい値を0.5に設定
         integration_settings.similarity_threshold = 0.5
         
         mock_embeddings_instance = Mock()
-        mock_huggingface_embeddings.return_value = mock_embeddings_instance
+        mock_service = Mock()
+        mock_service.embeddings = mock_embeddings_instance
+        mock_embedding_service.return_value = mock_service
         
         mock_vector_store = Mock()
         mock_chroma.from_documents.return_value = mock_vector_store
@@ -190,17 +196,19 @@ class TestFullRAGPipeline:
             assert search_results[1][1] == 0.6
     
     @patch("src.services.rag_service.ChatOpenAI")
-    @patch("src.services.embeddings.HuggingFaceEmbeddings")
+    @patch("src.services.rag_service.EmbeddingService")
     @patch("src.services.rag_service.Chroma")
     def test_context_length_truncation_integration(
-        self, mock_chroma, mock_huggingface_embeddings, mock_chat_openai, integration_settings
+        self, mock_chroma, mock_embedding_service, mock_chat_openai, integration_settings
     ):
         """コンテキスト長制限の統合テスト"""
         # コンテキスト長を小さく設定
         integration_settings.max_context_length = 100
         
         mock_embeddings_instance = Mock()
-        mock_huggingface_embeddings.return_value = mock_embeddings_instance
+        mock_service = Mock()
+        mock_service.embeddings = mock_embeddings_instance
+        mock_embedding_service.return_value = mock_service
         
         mock_vector_store = Mock()
         mock_chroma.from_documents.return_value = mock_vector_store
@@ -237,14 +245,16 @@ class TestFullRAGPipeline:
             assert context.endswith("...")
     
     @patch("src.services.rag_service.ChatOpenAI")
-    @patch("src.services.embeddings.HuggingFaceEmbeddings")
+    @patch("src.services.rag_service.EmbeddingService")
     @patch("src.services.rag_service.Chroma")
     def test_no_search_results_pipeline(
-        self, mock_chroma, mock_huggingface_embeddings, mock_chat_openai, integration_settings
+        self, mock_chroma, mock_embedding_service, mock_chat_openai, integration_settings
     ):
         """検索結果がない場合のパイプラインをテスト"""
         mock_embeddings_instance = Mock()
-        mock_huggingface_embeddings.return_value = mock_embeddings_instance
+        mock_service = Mock()
+        mock_service.embeddings = mock_embeddings_instance
+        mock_embedding_service.return_value = mock_service
         
         mock_vector_store = Mock()
         mock_chroma.from_documents.return_value = mock_vector_store
@@ -268,14 +278,16 @@ class TestFullRAGPipeline:
         assert response.confidence == 0.0
     
     @patch("src.services.rag_service.ChatOpenAI")
-    @patch("src.services.embeddings.HuggingFaceEmbeddings")
+    @patch("src.services.rag_service.EmbeddingService")
     @patch("src.services.rag_service.Chroma")
     def test_multiple_chunks_from_same_section_integration(
-        self, mock_chroma, mock_huggingface_embeddings, mock_chat_openai, integration_settings
+        self, mock_chroma, mock_embedding_service, mock_chat_openai, integration_settings
     ):
         """同じセクションからの複数チャンクの統合テスト"""
         mock_embeddings_instance = Mock()
-        mock_huggingface_embeddings.return_value = mock_embeddings_instance
+        mock_service = Mock()
+        mock_service.embeddings = mock_embeddings_instance
+        mock_embedding_service.return_value = mock_service
         
         mock_vector_store = Mock()
         mock_chroma.from_documents.return_value = mock_vector_store
@@ -331,10 +343,10 @@ class TestRAGPipelinePerformance:
     """RAGパイプラインのパフォーマンステスト"""
     
     @patch("src.services.rag_service.ChatOpenAI")
-    @patch("src.services.embeddings.HuggingFaceEmbeddings")
+    @patch("src.services.rag_service.EmbeddingService")
     @patch("src.services.rag_service.Chroma")
     def test_large_document_processing_performance(
-        self, mock_chroma, mock_huggingface_embeddings, mock_chat_openai, integration_settings
+        self, mock_chroma, mock_embedding_service, mock_chat_openai, temp_dir
     ):
         """大容量ドキュメント処理のパフォーマンステスト"""
         import time
@@ -352,13 +364,24 @@ class TestRAGPipelinePerformance:
             temp_file_path = f.name
         
         try:
-            # 設定を更新
-            integration_settings.spec_file_path = temp_file_path
-            integration_settings.chunk_size = 1000
-            integration_settings.chunk_overlap = 200
+            # 設定を作成
+            integration_settings = Settings(
+                openai_api_key="test_api_key",
+                openai_model="gpt-4o-mini",
+                openai_temperature=0.1,
+                chroma_persist_directory=os.path.join(temp_dir, "chroma"),
+                embedding_model_name="test/embedding-model",
+                spec_file_path=temp_file_path,
+                chunk_size=1000,
+                chunk_overlap=200,
+                max_context_length=1000,
+                similarity_threshold=0.3
+            )
             
             mock_embeddings_instance = Mock()
-            mock_huggingface_embeddings.return_value = mock_embeddings_instance
+            mock_service = Mock()
+            mock_service.embeddings = mock_embeddings_instance
+            mock_embedding_service.return_value = mock_service
             
             mock_vector_store = Mock()
             mock_chroma.from_documents.return_value = mock_vector_store

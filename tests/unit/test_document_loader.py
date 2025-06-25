@@ -36,13 +36,13 @@ class TestDocumentLoader:
         loader = DocumentLoader("test_file.md", chunk_size=800, chunk_overlap=150)
         
         # RecursiveCharacterTextSplitterが正しく設定されていることを確認
-        assert loader.text_splitter.chunk_size == 800
-        assert loader.text_splitter.chunk_overlap == 150
+        assert loader.text_splitter._chunk_size == 800
+        assert loader.text_splitter._chunk_overlap == 150
         
         # セパレーターが正しく設定されていることを確認
         expected_separators = ["\n## ", "\n### ", "\n\n", "\n", " ", ""]
-        assert loader.text_splitter.separators == expected_separators
-        assert loader.text_splitter.keep_separator is True
+        assert loader.text_splitter._separators == expected_separators
+        assert loader.text_splitter._keep_separator is True
     
     def test_load_documents_file_not_found(self):
         """存在しないファイルでFileNotFoundErrorが発生することをテスト"""
@@ -281,8 +281,8 @@ def test_different_chunk_configurations(chunk_size, chunk_overlap):
     
     assert loader.chunk_size == chunk_size
     assert loader.chunk_overlap == chunk_overlap
-    assert loader.text_splitter.chunk_size == chunk_size
-    assert loader.text_splitter.chunk_overlap == chunk_overlap
+    assert loader.text_splitter._chunk_size == chunk_size
+    assert loader.text_splitter._chunk_overlap == chunk_overlap
 
 
 @pytest.mark.parametrize("file_path", [

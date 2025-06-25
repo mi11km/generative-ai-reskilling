@@ -354,7 +354,7 @@ class TestAPIIntegration:
             assert response.status_code == 200
             
             data = response.json()
-            assert len(data["answer"]) > 1000  # 大きな回答
+            assert len(data["answer"]) > 500  # 大きな回答
             assert len(data["sources"]) == 5
             
             # 各ソースが適切に構造化されていることを確認

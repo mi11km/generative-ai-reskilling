@@ -82,7 +82,7 @@ def main():
     settings = get_settings()
     
     # OpenAI APIキーのチェック
-    if not settings.openai_api_key:
+    if not settings.openai_api_key or not settings.openai_api_key.strip():
         logger.error("OPENAI_API_KEY環境変数が設定されていません")
         sys.exit(1)
     

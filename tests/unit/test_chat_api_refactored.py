@@ -139,12 +139,10 @@ class TestDependencyInjection:
 class TestRefactoredChatAPI:
     """リファクタリング後のチャットAPIのテスト"""
     
-    @patch("src.api.chat.get_rag_service")
-    def test_chat_endpoint_with_refactored_dependency(self, mock_get_rag_service, client, reset_container):
+    def test_chat_endpoint_with_refactored_dependency(self, app, client, reset_container):
         """リファクタリング後の依存性注入でのチャットエンドポイントをテスト"""
         # RAGサービスのモック
         mock_rag_service = Mock()
-        mock_get_rag_service.return_value = mock_rag_service
         
         # チャットレスポンスのモック
         mock_response = ChatResponse(
@@ -160,37 +158,49 @@ class TestRefactoredChatAPI:
         )
         mock_rag_service.chat.return_value = mock_response
         
-        # リクエスト実行
-        response = client.post("/api/v1/chat", json={
-            "question": "リファクタリング後のテスト質問です",
-            "max_results": 3
-        })
+        # dependency_overridesを使ってRAGサービスをモックに置き換え
+        app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
         
-        # ステータスコードの確認
-        assert response.status_code == 200
-        
-        # レスポンス内容の確認
-        data = response.json()
-        assert data["answer"] == "リファクタリング後のテスト回答です。"
-        assert len(data["sources"]) == 1
-        assert data["confidence"] == 0.85
-        
-        # RAGサービスが正しく呼ばれたことを確認
-        mock_rag_service.chat.assert_called_once_with("リファクタリング後のテスト質問です", 3)
+        try:
+            # リクエスト実行
+            response = client.post("/api/v1/chat", json={
+                "question": "リファクタリング後のテスト質問です",
+                "max_results": 3
+            })
+            
+            # ステータスコードの確認
+            assert response.status_code == 200
+            
+            # レスポンス内容の確認
+            data = response.json()
+            assert data["answer"] == "リファクタリング後のテスト回答です。"
+            assert len(data["sources"]) == 1
+            assert data["confidence"] == 0.85
+            
+            # RAGサービスが正しく呼ばれたことを確認
+            mock_rag_service.chat.assert_called_once_with("リファクタリング後のテスト質問です", 3)
+        finally:
+            # テスト後にdependency_overridesをクリア
+            app.dependency_overrides.clear()
     
-    @patch("src.api.chat.get_rag_service")
-    def test_health_endpoint_with_refactored_dependency(self, mock_get_rag_service, client, reset_container):
+    def test_health_endpoint_with_refactored_dependency(self, app, client, reset_container):
         """リファクタリング後の依存性注入でのヘルスエンドポイントをテスト"""
         # RAGサービスのモック
         mock_rag_service = Mock()
         mock_rag_service.is_ready.return_value = True
-        mock_get_rag_service.return_value = mock_rag_service
         
-        response = client.get("/api/v1/health")
+        # dependency_overridesを使ってRAGサービスをモックに置き換え
+        app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
         
-        assert response.status_code == 200
-        data = response.json()
-        assert data["vector_store_ready"] is True
+        try:
+            response = client.get("/api/v1/health")
+            
+            assert response.status_code == 200
+            data = response.json()
+            assert data["vector_store_ready"] is True
+        finally:
+            # テスト後にdependency_overridesをクリア
+            app.dependency_overrides.clear()
 
 
 class TestRAGServiceContainerIntegration:
@@ -290,11 +300,9 @@ class TestBackwardCompatibility:
     ("少し長めの質問です", 1),
     ("とても長い質問になります" * 10, 1),
 ])
-@patch("src.api.chat.get_rag_service")
-def test_refactored_endpoint_various_inputs(mock_get_rag_service, question, expected_calls, client, reset_container):
+def test_refactored_endpoint_various_inputs(question, expected_calls, client, reset_container):
     """リファクタリング後のエンドポイントで様々な入力をパラメータ化テストで検証"""
     mock_rag_service = Mock()
-    mock_get_rag_service.return_value = mock_rag_service
     
     mock_response = ChatResponse(
         answer=f"回答: {question[:20]}...",
@@ -303,10 +311,17 @@ def test_refactored_endpoint_various_inputs(mock_get_rag_service, question, expe
     )
     mock_rag_service.chat.return_value = mock_response
     
-    response = client.post("/api/v1/chat", json={
-        "question": question,
-        "max_results": 3
-    })
+    # 依存性をオーバーライド
+    app = client.app
+    app.dependency_overrides[get_rag_service] = lambda: mock_rag_service
     
-    assert response.status_code == 200
-    assert mock_rag_service.chat.call_count == expected_calls
+    try:
+        response = client.post("/api/v1/chat", json={
+            "question": question,
+            "max_results": 3
+        })
+        
+        assert response.status_code == 200
+        assert mock_rag_service.chat.call_count == expected_calls
+    finally:
+        app.dependency_overrides.clear()

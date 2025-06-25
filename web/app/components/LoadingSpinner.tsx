@@ -19,7 +19,9 @@ export function LoadingSpinner({
         className="w-full h-full text-blue-600"
         fill="none"
         viewBox="0 0 24 24"
+        aria-label="Loading"
       >
+        <title>Loading</title>
         <circle
           className="opacity-25"
           cx="12"

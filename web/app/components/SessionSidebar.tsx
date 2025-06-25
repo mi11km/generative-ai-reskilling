@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { apiClient } from "../lib/api";
 import type { SessionState } from "../lib/types";
 
@@ -24,7 +24,7 @@ export function SessionSidebar({
     error: null,
   });
 
-  const loadSessions = async () => {
+  const loadSessions = useCallback(async () => {
     setSessionState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
       const sessions = await apiClient.getSessions();
@@ -43,7 +43,7 @@ export function SessionSidebar({
             : "セッション一覧の取得に失敗しました",
       }));
     }
-  };
+  }, []);
 
   const handleDeleteSession = async (
     sessionId: string,
@@ -86,7 +86,7 @@ export function SessionSidebar({
     if (isVisible) {
       loadSessions();
     }
-  }, [isVisible]);
+  }, [isVisible, loadSessions]);
 
   return (
     <>
@@ -115,6 +115,7 @@ export function SessionSidebar({
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">会話履歴</h2>
           <button
+            type="button"
             onClick={onToggle}
             className="p-2 rounded-lg hover:bg-gray-100 md:hidden"
           >
@@ -125,6 +126,7 @@ export function SessionSidebar({
         {/* 新規セッションボタン */}
         <div className="p-4 border-b border-gray-200">
           <button
+            type="button"
             onClick={onNewSession}
             className="w-full flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -149,54 +151,48 @@ export function SessionSidebar({
             !sessionState.error &&
             sessionState.sessions &&
             sessionState.sessions.length === 0 && (
-              <div
-                className="p-4 text-center text-gray-500"
-                role="status"
-                aria-label="No conversation history"
-              >
+              <output className="p-4 text-center text-gray-500">
                 会話履歴がありません
-              </div>
+              </output>
             )}
 
-          {sessionState.sessions &&
-            sessionState.sessions.map((session) => (
-              <div
-                key={session.id}
-                onClick={() => onSessionSelect(session.id)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && onSessionSelect(session.id)
-                }
-                role="button"
-                tabIndex={0}
-                aria-label={`Select session: ${session.title}`}
-                className={`
-                flex items-center justify-between p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50
+          {sessionState.sessions?.map((session) => (
+            <div
+              key={session.id}
+              className={`
+                flex items-center justify-between p-4 border-b border-gray-100 hover:bg-gray-50
                 ${currentSessionId === session.id ? "bg-blue-50 border-blue-200" : ""}
               `}
+            >
+              <button
+                type="button"
+                onClick={() => onSessionSelect(session.id)}
+                aria-label={`Select session: ${session.title}`}
+                className="flex-1 min-w-0 text-left"
               >
-                <div className="flex-1 min-w-0">
-                  <h3
-                    className={`
+                <h3
+                  className={`
                   font-medium truncate
                   ${currentSessionId === session.id ? "text-blue-700" : "text-gray-800"}
                 `}
-                  >
-                    {session.title}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {formatDate(session.updated_at)}
-                  </p>
-                </div>
-
-                <button
-                  onClick={(e) => handleDeleteSession(session.id, e)}
-                  className="p-1 text-gray-400 hover:text-red-600 rounded"
-                  title="削除"
                 >
-                  🗑️
-                </button>
-              </div>
-            ))}
+                  {session.title}
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {formatDate(session.updated_at)}
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => handleDeleteSession(session.id, e)}
+                className="p-1 text-gray-400 hover:text-red-600 rounded"
+                title="削除"
+              >
+                🗑️
+              </button>
+            </div>
+          )) || null}
         </div>
       </div>
     </>

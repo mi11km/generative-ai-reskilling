@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { SessionSidebar } from "./SessionSidebar";
@@ -23,13 +23,52 @@ export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const scrollToBottom = () => {
+  const generateMessageId = () => Math.random().toString(36).substr(2, 9);
+
+  const convertMessageResponseToMessage = useCallback(
+    (msgResponse: MessageResponse): Message => ({
+      id: msgResponse.id,
+      type: msgResponse.role as "user" | "assistant",
+      content: msgResponse.content,
+      timestamp: new Date(msgResponse.created_at),
+      sources: msgResponse.metadata?.sources as SourceDocument[] | undefined,
+      confidence: msgResponse.metadata?.confidence as number | undefined,
+    }),
+    []
+  );
+
+  const loadSessionMessages = useCallback(
+    async (sessionId: string) => {
+      try {
+        const messageResponses = await apiClient.getSessionMessages(sessionId);
+        const messages = messageResponses.map(convertMessageResponseToMessage);
+
+        setChatState((prev) => ({
+          ...prev,
+          messages,
+          currentSessionId: sessionId,
+          error: null,
+        }));
+      } catch (error) {
+        setChatState((prev) => ({
+          ...prev,
+          error:
+            error instanceof Error
+              ? error.message
+              : "メッセージの読み込みに失敗しました",
+        }));
+      }
+    },
+    [convertMessageResponseToMessage]
+  );
+
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [chatState.messages]);
+  }, [scrollToBottom]);
 
   useEffect(() => {
     const initializeSession = async () => {
@@ -50,48 +89,13 @@ export function ChatInterface() {
     };
 
     initializeSession();
-  }, []);
+  }, [chatState.currentSessionId, loadSessionMessages]);
 
   useEffect(() => {
     if (chatState.currentSessionId && SessionStorage.isStorageAvailable()) {
       SessionStorage.saveCurrentSessionId(chatState.currentSessionId);
     }
   }, [chatState.currentSessionId]);
-
-  const generateMessageId = () => Math.random().toString(36).substr(2, 9);
-
-  const convertMessageResponseToMessage = (
-    msgResponse: MessageResponse
-  ): Message => ({
-    id: msgResponse.id,
-    type: msgResponse.role as "user" | "assistant",
-    content: msgResponse.content,
-    timestamp: new Date(msgResponse.created_at),
-    sources: msgResponse.metadata?.sources as SourceDocument[] | undefined,
-    confidence: msgResponse.metadata?.confidence as number | undefined,
-  });
-
-  const loadSessionMessages = async (sessionId: string) => {
-    try {
-      const messageResponses = await apiClient.getSessionMessages(sessionId);
-      const messages = messageResponses.map(convertMessageResponseToMessage);
-
-      setChatState((prev) => ({
-        ...prev,
-        messages,
-        currentSessionId: sessionId,
-        error: null,
-      }));
-    } catch (error) {
-      setChatState((prev) => ({
-        ...prev,
-        error:
-          error instanceof Error
-            ? error.message
-            : "メッセージの読み込みに失敗しました",
-      }));
-    }
-  };
 
   const handleSessionSelect = async (sessionId: string) => {
     if (sessionId === chatState.currentSessionId) return;
@@ -192,6 +196,7 @@ export function ChatInterface() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
+                type="button"
                 onClick={() => setSidebarVisible(!sidebarVisible)}
                 className="p-2 rounded-lg hover:bg-gray-100 md:hidden"
               >
@@ -210,6 +215,7 @@ export function ChatInterface() {
             </div>
 
             <button
+              type="button"
               onClick={handleNewSession}
               className="hidden md:flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -257,6 +263,7 @@ export function ChatInterface() {
                     <span className="text-red-700">{chatState.error}</span>
                   </div>
                   <button
+                    type="button"
                     onClick={clearError}
                     className="text-red-600 hover:text-red-800 text-sm"
                   >

@@ -33,7 +33,9 @@ class TestRAGServiceConversationHistory:
                 "src.services.rag_service.EmbeddingService"
             ) as mock_embedding_service,
             patch("src.services.rag_service.ChatOpenAI") as mock_chat_openai,
-            patch("src.services.rag_service.DatabaseManager") as mock_db_manager,
+            patch(
+                "src.services.rag_service.get_database_manager_singleton"
+            ) as mock_get_db_manager,
             patch(
                 "src.services.rag_service.SessionService"
             ) as mock_session_service_class,
@@ -47,7 +49,7 @@ class TestRAGServiceConversationHistory:
             mock_chat_openai.return_value = mock_llm_instance
 
             mock_db_instance = Mock()
-            mock_db_manager.return_value = mock_db_instance
+            mock_get_db_manager.return_value = mock_db_instance
 
             mock_session_service = Mock()
             mock_session_service_class.return_value = mock_session_service

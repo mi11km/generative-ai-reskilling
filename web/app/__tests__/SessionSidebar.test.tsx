@@ -117,10 +117,12 @@ describe("SessionSidebar", () => {
     render(<SessionSidebar {...defaultProps} currentSessionId="session-1" />);
 
     await waitFor(() => {
-      const sessionElement = screen.getByLabelText(
+      const sessionButton = screen.getByLabelText(
         "Select session: テストセッション1"
       );
-      expect(sessionElement).toHaveClass("bg-blue-50");
+      // 親要素がハイライトされているかチェック
+      const parentDiv = sessionButton.closest("div");
+      expect(parentDiv).toHaveClass("bg-blue-50");
     });
   });
 

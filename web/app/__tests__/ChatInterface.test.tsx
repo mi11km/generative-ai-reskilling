@@ -15,7 +15,9 @@ vi.mock("../lib/api", () => ({
 vi.mock("../components/SessionSidebar", () => ({
   SessionSidebar: ({ onToggle }: { onToggle: () => void }) => (
     <div data-testid="session-sidebar">
-      <button onClick={onToggle}>Toggle Sidebar</button>
+      <button type="button" onClick={onToggle}>
+        Toggle Sidebar
+      </button>
     </div>
   ),
 }));
@@ -170,7 +172,7 @@ describe("ChatInterface", () => {
     expect(submitBtn).toBeDisabled();
 
     // Promiseを解決
-    resolvePromise!({
+    resolvePromise?.({
       answer: "テスト回答",
       sources: [],
       confidence: 0.95,

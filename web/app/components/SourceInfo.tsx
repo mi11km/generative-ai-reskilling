@@ -31,6 +31,7 @@ export function SourceInfo({ sources, confidence }: SourceInfoProps) {
           <span>{sources.length}件の参照</span>
         </div>
         <button
+          type="button"
           onClick={() => setIsExpanded(!isExpanded)}
           className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
         >
@@ -41,7 +42,10 @@ export function SourceInfo({ sources, confidence }: SourceInfoProps) {
       {isExpanded && (
         <div className="mt-3 space-y-3">
           {sources.map((source, index) => (
-            <div key={index} className="bg-gray-50 rounded-lg p-3">
+            <div
+              key={`${source.section}-${index}`}
+              className="bg-gray-50 rounded-lg p-3"
+            >
               <div className="font-medium text-sm text-gray-700 mb-1">
                 📄 {source.section}
               </div>

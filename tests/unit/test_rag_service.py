@@ -324,14 +324,14 @@ class TestRAGService:
 
     @patch("src.services.rag_service.EmbeddingService")
     @patch("src.services.rag_service.ChatOpenAI")
-    @patch("src.services.rag_service.DatabaseManager")
+    @patch("src.services.rag_service.get_database_manager_singleton")
     @patch("src.services.rag_service.SessionService")
     @patch("src.services.rag_service.RAGService._initialize_vector_store")
     def test_chat_successful(
         self,
         mock_init,
         mock_session_service_class,
-        mock_db_manager,
+        mock_get_db_manager,
         mock_chat_openai,
         mock_embedding_service,
         mock_settings,
@@ -391,14 +391,14 @@ class TestRAGService:
 
     @patch("src.services.rag_service.EmbeddingService")
     @patch("src.services.rag_service.ChatOpenAI")
-    @patch("src.services.rag_service.DatabaseManager")
+    @patch("src.services.rag_service.get_database_manager_singleton")
     @patch("src.services.rag_service.SessionService")
     @patch("src.services.rag_service.RAGService._initialize_vector_store")
     def test_chat_no_results(
         self,
         mock_init,
         mock_session_service_class,
-        mock_db_manager,
+        mock_get_db_manager,
         mock_chat_openai,
         mock_embedding_service,
         mock_settings,
@@ -426,14 +426,14 @@ class TestRAGService:
 
     @patch("src.services.rag_service.EmbeddingService")
     @patch("src.services.rag_service.ChatOpenAI")
-    @patch("src.services.rag_service.DatabaseManager")
+    @patch("src.services.rag_service.get_database_manager_singleton")
     @patch("src.services.rag_service.SessionService")
     @patch("src.services.rag_service.RAGService._initialize_vector_store")
     def test_chat_with_truncated_source_content(
         self,
         mock_init,
         mock_session_service_class,
-        mock_db_manager,
+        mock_get_db_manager,
         mock_chat_openai,
         mock_embedding_service,
         mock_settings,

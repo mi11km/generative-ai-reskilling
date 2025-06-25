@@ -1,3 +1,23 @@
 [tools]
 bun = "1.2.17"
 uv = "0.7.14"
+
+[tasks.test]
+description = "Test App"
+run = ["uv run pytest tests/", "cd web && bun run test"]
+
+[tasks.lint]
+description = "Lint App"
+run = ["uv run ruff check src/ tests/ --fix", "cd web && bun run lint"]
+
+[tasks.format]
+description = "Format App"
+run = ["uv run ruff format src/ tests/"]
+
+[tasks.run-api]
+description = "Run API in Development Mode"
+run = ["uv run python -m src.main"]
+
+[tasks.run-web]
+description = "Run Web App in Development Mode"
+run = ["cd web && bun run dev"]

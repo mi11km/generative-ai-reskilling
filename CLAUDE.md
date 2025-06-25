@@ -10,6 +10,22 @@ This file provides guidance to Claude Code (claude.ai/code) when in working with
 
 ## 開発環境セットアップと実行コマンド
 
+### 全体
+```bash
+# フォーマット
+mise run format
+
+# リント
+mise run lint
+
+# テストの実行
+mise run test
+
+# 開発サーバーの起動
+mise run run-api
+mise run run-web
+```
+
 ### バックエンド（FastAPI）
 
 ```bash
@@ -18,6 +34,12 @@ uv sync
 
 # メインアプリケーションの実行（FastAPIサーバー起動）
 uv run python -m src.main
+
+# フォーマット
+uv run ruff format
+
+# リント
+uv run ruff check --fix
 
 # Testの実行
 uv run pytest tests/
@@ -54,6 +76,9 @@ bun run typecheck
 
 # リンター実行
 bun run lint
+
+# テストの実行
+bun run test
 
 # ビルド
 bun run build

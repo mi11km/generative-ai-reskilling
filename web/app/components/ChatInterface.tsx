@@ -1,16 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageBubble } from './MessageBubble';
 import { LoadingSpinner } from './LoadingSpinner';
+import { SessionSidebar } from './SessionSidebar';
 import { apiClient } from '../lib/api';
-import type { Message, ChatState } from '../lib/types';
+import type { Message, ChatState, MessageResponse, SourceDocument } from '../lib/types';
 
 export function ChatInterface() {
   const [chatState, setChatState] = useState<ChatState>({
     messages: [],
     isLoading: false,
     error: null,
+    currentSessionId: null,
   });
   const [inputValue, setInputValue] = useState('');
+  const [sidebarVisible, setSidebarVisible] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -23,6 +26,51 @@ export function ChatInterface() {
   }, [chatState.messages]);
 
   const generateMessageId = () => Math.random().toString(36).substr(2, 9);
+
+  const convertMessageResponseToMessage = (msgResponse: MessageResponse): Message => ({
+    id: msgResponse.id,
+    type: msgResponse.role as 'user' | 'assistant',
+    content: msgResponse.content,
+    timestamp: new Date(msgResponse.created_at),
+    sources: msgResponse.metadata?.sources as SourceDocument[] | undefined,
+    confidence: msgResponse.metadata?.confidence as number | undefined,
+  });
+
+  const loadSessionMessages = async (sessionId: string) => {
+    try {
+      const messageResponses = await apiClient.getSessionMessages(sessionId);
+      const messages = messageResponses.map(convertMessageResponseToMessage);
+      
+      setChatState(prev => ({
+        ...prev,
+        messages,
+        currentSessionId: sessionId,
+        error: null,
+      }));
+    } catch (error) {
+      setChatState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'メッセージの読み込みに失敗しました',
+      }));
+    }
+  };
+
+  const handleSessionSelect = async (sessionId: string) => {
+    if (sessionId === chatState.currentSessionId) return;
+    
+    await loadSessionMessages(sessionId);
+    setSidebarVisible(false);
+  };
+
+  const handleNewSession = () => {
+    setChatState(prev => ({
+      ...prev,
+      messages: [],
+      currentSessionId: null,
+      error: null,
+    }));
+    setSidebarVisible(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +97,7 @@ export function ChatInterface() {
       const response = await apiClient.chat({
         question: userMessage.content,
         max_results: 3,
+        session_id: chatState.currentSessionId || undefined,
       });
 
       const assistantMessage: Message = {
@@ -64,6 +113,7 @@ export function ChatInterface() {
         ...prev,
         messages: [...prev.messages, assistantMessage],
         isLoading: false,
+        currentSessionId: response.session_id || prev.currentSessionId,
       }));
     } catch (error) {
       setChatState(prev => ({
@@ -86,22 +136,54 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-xl font-semibold text-gray-800">
-            🎮 ゲーム仕様問い合わせBOT
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            ゲーム仕様について何でもお聞きください
-          </p>
-        </div>
-      </header>
+    <div className="flex h-screen bg-gray-50">
+      {/* Session Sidebar */}
+      <SessionSidebar
+        currentSessionId={chatState.currentSessionId}
+        onSessionSelect={handleSessionSelect}
+        onNewSession={handleNewSession}
+        isVisible={sidebarVisible}
+        onToggle={() => setSidebarVisible(!sidebarVisible)}
+      />
 
-      {/* Messages */}
-      <main className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="max-w-4xl mx-auto">
+      {/* Main Content */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSidebarVisible(!sidebarVisible)}
+                className="p-2 rounded-lg hover:bg-gray-100 md:hidden"
+              >
+                ☰
+              </button>
+              <div>
+                <h1 className="text-xl font-semibold text-gray-800">
+                  🎮 ゲーム仕様問い合わせBOT
+                </h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  {chatState.currentSessionId 
+                    ? '継続会話中' 
+                    : 'ゲーム仕様について何でもお聞きください'
+                  }
+                </p>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleNewSession}
+              className="hidden md:flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <span>+</span>
+              新しい会話
+            </button>
+          </div>
+        </header>
+
+        {/* Messages */}
+        <main className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="max-w-4xl mx-auto">
           {chatState.messages.length === 0 && (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">🎮</div>
@@ -146,13 +228,13 @@ export function ChatInterface() {
             </div>
           )}
 
-          <div ref={messagesEndRef} />
-        </div>
-      </main>
+            <div ref={messagesEndRef} />
+          </div>
+        </main>
 
-      {/* Input */}
-      <footer className="bg-white border-t border-gray-200 px-6 py-4">
-        <div className="max-w-4xl mx-auto">
+        {/* Input */}
+        <footer className="bg-white border-t border-gray-200 px-6 py-4">
+          <div className="max-w-4xl mx-auto">
           <form onSubmit={handleSubmit} className="flex gap-3">
             <textarea
               ref={inputRef}
@@ -176,11 +258,12 @@ export function ChatInterface() {
               )}
             </button>
           </form>
-          <p className="text-xs text-gray-500 mt-2 text-center">
-            Enterで送信、Shift+Enterで改行
-          </p>
-        </div>
-      </footer>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              Enterで送信、Shift+Enterで改行
+            </p>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }

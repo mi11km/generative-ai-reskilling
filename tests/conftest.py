@@ -1,4 +1,3 @@
-import os
 import tempfile
 import pytest
 from typing import Generator
@@ -19,7 +18,7 @@ def test_settings() -> Settings:
         spec_file_path="tests/fixtures/test_spec.md",
         chunk_size=500,
         chunk_overlap=100,
-        debug=True
+        debug=True,
     )
 
 
@@ -36,13 +35,13 @@ def mock_openai_client():
     with patch("openai.OpenAI") as mock_client:
         mock_instance = Mock()
         mock_client.return_value = mock_instance
-        
+
         # ChatCompletion.create のモック応答
         mock_response = Mock()
         mock_response.choices = [Mock()]
         mock_response.choices[0].message.content = "テスト回答です。"
         mock_instance.chat.completions.create.return_value = mock_response
-        
+
         yield mock_instance
 
 
@@ -52,11 +51,11 @@ def mock_embedding_service():
     with patch("src.services.embeddings.EmbeddingService") as mock_service:
         mock_instance = Mock()
         mock_service.return_value = mock_instance
-        
+
         # ダミーの埋め込みベクトル
         mock_instance.embed_query.return_value = [0.1] * 1024
         mock_instance.embed_documents.return_value = [[0.1] * 1024, [0.2] * 1024]
-        
+
         yield mock_instance
 
 
@@ -67,13 +66,13 @@ def sample_documents():
         {
             "content": "## **1. ゲーム概要**\n\nスゲリス・サーガは冒険RPGです。",
             "section": "## **1. ゲーム概要**",
-            "subsection": ""
+            "subsection": "",
         },
         {
             "content": "### **1.1 基本システム**\n\nターン制バトルシステムを採用しています。",
             "section": "## **1. ゲーム概要**",
-            "subsection": "### **1.1 基本システム**"
-        }
+            "subsection": "### **1.1 基本システム**",
+        },
     ]
 
 

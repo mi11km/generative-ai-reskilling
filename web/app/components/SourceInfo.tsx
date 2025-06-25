@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { SourceDocument } from '../lib/types';
+import { useState } from "react";
+import type { SourceDocument } from "../lib/types";
 
 interface SourceInfoProps {
   sources: SourceDocument[];
@@ -9,17 +9,15 @@ interface SourceInfoProps {
 export function SourceInfo({ sources, confidence }: SourceInfoProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const confidenceColor = confidence >= 0.8 
-    ? 'text-green-600' 
-    : confidence >= 0.6 
-    ? 'text-yellow-600' 
-    : 'text-red-600';
+  const confidenceColor =
+    confidence >= 0.8
+      ? "text-green-600"
+      : confidence >= 0.6
+        ? "text-yellow-600"
+        : "text-red-600";
 
-  const confidenceLabel = confidence >= 0.8 
-    ? '高い' 
-    : confidence >= 0.6 
-    ? '中程度' 
-    : '低い';
+  const confidenceLabel =
+    confidence >= 0.8 ? "高い" : confidence >= 0.6 ? "中程度" : "低い";
 
   return (
     <div className="mt-3 border-t border-gray-200 pt-3">
@@ -36,7 +34,7 @@ export function SourceInfo({ sources, confidence }: SourceInfoProps) {
           onClick={() => setIsExpanded(!isExpanded)}
           className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
         >
-          {isExpanded ? '折りたたむ' : '詳細を見る'}
+          {isExpanded ? "折りたたむ" : "詳細を見る"}
         </button>
       </div>
 
@@ -48,10 +46,9 @@ export function SourceInfo({ sources, confidence }: SourceInfoProps) {
                 📄 {source.section}
               </div>
               <div className="text-sm text-gray-600 leading-relaxed">
-                {source.content.length > 200 
-                  ? `${source.content.substring(0, 200)}...` 
-                  : source.content
-                }
+                {source.content.length > 200
+                  ? `${source.content.substring(0, 200)}...`
+                  : source.content}
               </div>
             </div>
           ))}

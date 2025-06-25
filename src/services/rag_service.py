@@ -10,7 +10,7 @@ import logging
 from src.services.document_loader import DocumentLoader
 from src.services.embeddings import EmbeddingService
 from src.services.session_service import SessionService
-from src.models.database import DatabaseManager, get_database_manager_singleton
+from src.models.database import get_database_manager_singleton
 from src.models.schemas import SourceDocument, ChatResponse
 from src.config.settings import Settings
 

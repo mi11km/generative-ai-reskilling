@@ -9,7 +9,7 @@ from src.models.schemas import (
     MessageResponse,
 )
 from src.services.session_service import SessionService
-from src.models.database import DatabaseManager, get_database_manager_singleton
+from src.models.database import get_database_manager_singleton
 
 logger = logging.getLogger(__name__)
 
